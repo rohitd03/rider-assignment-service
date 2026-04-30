@@ -18,10 +18,10 @@ const (
 // (i.e. status is AVAILABLE). LastAssignedAt drives tie-breaking:
 // the rider idle the longest is preferred when multiple riders are equidistant.
 type Rider struct {
-	ID             string
-	Name           string
-	IsAvailable    bool
-	Lat            float64
-	Lng            float64
-	LastAssignedAt time.Time
+	ID             string    `json:"id"`
+	Name           string    `json:"name"`
+	IsAvailable    bool      `json:"is_available"`
+	Lat            float64   `json:"lat"`
+	Lng            float64   `json:"lng"`
+	LastAssignedAt time.Time `json:"last_assigned_at"`
 }

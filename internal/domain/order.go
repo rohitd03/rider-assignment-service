@@ -33,12 +33,12 @@ var validTransitions = map[OrderStatus][]OrderStatus{
 // Order represents a delivery order moving through its lifecycle.
 // RiderID is nil until the order reaches StatusAssigned.
 type Order struct {
-	ID        string
-	RiderID   *string
-	Status    OrderStatus
-	PickupLat float64
-	PickupLng float64
-	CreatedAt time.Time
+	ID        string      `json:"id"`
+	RiderID   *string     `json:"rider_id,omitempty"`
+	Status    OrderStatus `json:"status"`
+	PickupLat float64     `json:"pickup_lat"`
+	PickupLng float64     `json:"pickup_lng"`
+	CreatedAt time.Time   `json:"created_at"`
 }
 
 // Transition attempts to advance the order to the given status.
