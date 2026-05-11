@@ -1,0 +1,404 @@
+{
+    "info": {
+        "_postman_id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+        "name": "rider-assignment-service",
+        "description": "Happy-path flow: run requests top-to-bottom.\n\nRegister Rider → Update Location → Set Available → Create Order → Assign Rider → Update Status → Get Order.\n\n'Register Rider' and 'Create Order' automatically save the returned id to the rider_id and order_id collection variables so every subsequent request is pre-wired.",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "type": "string"
+        },
+        {
+            "key": "rider_id",
+            "value": "",
+            "type": "string",
+            "description": "Populated automatically by the 'Register Rider' test script."
+        },
+        {
+            "key": "order_id",
+            "value": "",
+            "type": "string",
+            "description": "Populated automatically by the 'Create Order' test script."
+        }
+    ],
+    "item": [
+        {
+            "name": "1 · Health Check",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"All dependencies are healthy\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.status).to.eql(\"ok\");",
+                            "    pm.expect(json.dependencies.postgres).to.eql(\"healthy\");",
+                            "    pm.expect(json.dependencies.redis).to.eql(\"healthy\");",
+                            "    pm.expect(json.dependencies.kafka).to.eql(\"healthy\");",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/health",
+                    "host": ["{{base_url}}"],
+                    "path": ["health"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "2 · Register Rider",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "var saved = pm.response.json();",
+                            "if (saved && saved.id) {",
+                            "    pm.environment.set(\"rider_id\", saved.id);",
+                            "    console.log(\"rider_id saved:\", saved.id);",
+                            "}",
+                            "",
+                            "pm.test(\"Status code is 201\", function () {",
+                            "    pm.response.to.have.status(201);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Response contains rider id\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.id).to.be.a(\"string\").and.not.empty;",
+                            "    pm.expect(json.name).to.eql(\"Ravi Kumar\");",
+                            "    pm.expect(json.is_available).to.be.true;",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"name\": \"Ravi Kumar\",\n    \"lat\": 12.9716,\n    \"lng\": 77.5946\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/riders",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "riders"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "3 · Update Rider Location",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Response confirms location update\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.message).to.eql(\"location updated\");",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"lat\": 12.9720,\n    \"lng\": 77.5950\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/riders/{{rider_id}}/location",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "riders", "{{rider_id}}", "location"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "4 · Set Rider Available",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Response confirms availability update\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.message).to.eql(\"availability updated\");",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "PATCH",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"available\": true\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/riders/{{rider_id}}/availability",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "riders", "{{rider_id}}", "availability"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "5 · Create Order",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "var saved = pm.response.json();",
+                            "if (saved && saved.id) {",
+                            "    pm.environment.set(\"order_id\", saved.id);",
+                            "    console.log(\"order_id saved:\", saved.id);",
+                            "}",
+                            "",
+                            "pm.test(\"Status code is 201\", function () {",
+                            "    pm.response.to.have.status(201);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Response contains order id\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.id).to.be.a(\"string\").and.not.empty;",
+                            "    pm.expect(json.status).to.eql(\"CREATED\");",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"pickup_lat\": 12.9716,\n    \"pickup_lng\": 77.5946\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/orders",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "orders"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "6 · Assign Rider",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Order is ASSIGNED and has a rider_id\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.status).to.eql(\"ASSIGNED\");",
+                            "    pm.expect(json.rider_id).to.be.a(\"string\").and.not.empty;",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "POST",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/orders/{{order_id}}/assign",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "orders", "{{order_id}}", "assign"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "7 · Update Order Status",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Order status is PICKED_UP\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.status).to.eql(\"PICKED_UP\");",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "PATCH",
+                "header": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/json",
+                        "type": "text"
+                    }
+                ],
+                "body": {
+                    "mode": "raw",
+                    "raw": "{\n    \"status\": \"PICKED_UP\"\n}",
+                    "options": {
+                        "raw": {
+                            "language": "json"
+                        }
+                    }
+                },
+                "url": {
+                    "raw": "{{base_url}}/api/v1/orders/{{order_id}}/status",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "orders", "{{order_id}}", "status"]
+                }
+            },
+            "response": []
+        },
+        {
+            "name": "8 · Get Order",
+            "event": [
+                {
+                    "listen": "test",
+                    "script": {
+                        "type": "text/javascript",
+                        "exec": [
+                            "pm.test(\"Status code is 2xx\", function () {",
+                            "    pm.expect(pm.response.code).to.be.within(200, 299);",
+                            "});",
+                            "",
+                            "pm.test(\"Response is valid JSON\", function () {",
+                            "    pm.response.json();",
+                            "});",
+                            "",
+                            "pm.test(\"Returned order id matches collection variable\", function () {",
+                            "    var json = pm.response.json();",
+                            "    pm.expect(json.id).to.eql(pm.collectionVariables.get(\"order_id\"));",
+                            "    pm.expect(json.status).to.be.a(\"string\").and.not.empty;",
+                            "});"
+                        ]
+                    }
+                }
+            ],
+            "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                    "raw": "{{base_url}}/api/v1/orders/{{order_id}}",
+                    "host": ["{{base_url}}"],
+                    "path": ["api", "v1", "orders", "{{order_id}}"]
+                }
+            },
+            "response": []
+        }
+    ]
+}
