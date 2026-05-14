@@ -52,8 +52,6 @@ func main() {
 		log.Error("failed to create postgres pool", "error", err)
 		os.Exit(1)
 	}
-	defer db.Close()
-
 	if err := db.Ping(ctx); err != nil {
 		log.Error("postgres ping failed", "error", err)
 		os.Exit(1)
@@ -62,8 +60,6 @@ func main() {
 
 	// ── Redis ─────────────────────────────────────────────────────────────────
 	redisClient := redis.NewClient(&redis.Options{Addr: cfg.RedisAddr})
-	defer redisClient.Close()
-
 	if err := redisClient.Ping(ctx).Err(); err != nil {
 		log.Error("redis ping failed", "error", err)
 		os.Exit(1)
@@ -74,7 +70,6 @@ func main() {
 	// kafka-go Writer connects lazily; no up-front ping is available.
 	// The health endpoint monitors broker reachability at runtime.
 	kafkaProducer := kafka.NewKafkaProducer(cfg.KafkaBroker)
-	defer kafkaProducer.Close()
 	log.Info("kafka producer initialised", "broker", cfg.KafkaBroker)
 
 	// ── Prometheus ────────────────────────────────────────────────────────────
@@ -84,6 +79,12 @@ func main() {
 		log.Error("failed to initialise metrics", "error", err)
 		os.Exit(1)
 	}
+
+	// All startup validation passed. Register cleanup defers here — after the
+	// last os.Exit — so no deferred close is skipped by an early exit above.
+	defer db.Close()
+	defer redisClient.Close()
+	defer kafkaProducer.Close()
 
 	// ── Repositories ──────────────────────────────────────────────────────────
 	orderRepo := repository.NewPostgresOrderRepository(db)

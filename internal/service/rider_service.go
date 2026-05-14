@@ -37,11 +37,11 @@ func NewRiderService(
 // index, and marks them AVAILABLE so they are immediately assignable.
 func (s *riderService) RegisterRider(ctx context.Context, name string, lat, lng float64) (*domain.Rider, error) {
 	rider := &domain.Rider{
-		ID:          uuid.New().String(),
-		Name:        name,
-		IsAvailable: true,
-		Lat:         lat,
-		Lng:         lng,
+		ID:             uuid.New().String(),
+		Name:           name,
+		IsAvailable:    true,
+		Lat:            lat,
+		Lng:            lng,
 		LastAssignedAt: time.Time{}, // zero — treated as longest idle for first assignment
 	}
 	if err := s.riderRepo.Create(ctx, rider); err != nil {
