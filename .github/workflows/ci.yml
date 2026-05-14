@@ -27,11 +27,8 @@ jobs:
       - name: Print coverage summary
         run: go tool cover -func=coverage.out
 
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
+
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
-        with:
-          version: v1.64.8
-          args: --timeout=5m
-        env:
-          GOFLAGS: "-buildvcs=false"
-          GOTOOLCHAIN: "local"
+        run: golangci-lint run ./... --timeout=5m
