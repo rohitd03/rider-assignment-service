@@ -364,7 +364,9 @@ func TestRegisterRider(t *testing.T) {
 			}
 			if tt.svcRider != nil {
 				var r domain.Rider
-				json.NewDecoder(rec.Body).Decode(&r)
+				if err := json.NewDecoder(rec.Body).Decode(&r); err != nil {
+					t.Fatalf("decode rider response: %v", err)
+				}
 				if r.Name != tt.svcRider.Name {
 					t.Errorf("response rider name = %q; want %q", r.Name, tt.svcRider.Name)
 				}

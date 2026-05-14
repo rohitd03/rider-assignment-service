@@ -19,18 +19,18 @@ import (
 
 type mockOrderRepo struct {
 	// canned responses
-	order         *domain.Order
-	getErr        error
-	createErr     error
-	updateErr     error
-	assignErr     error
+	order     *domain.Order
+	getErr    error
+	createErr error
+	updateErr error
+	assignErr error
 
 	// captured calls
-	created        *domain.Order
-	updatedID      string
-	updatedStatus  domain.OrderStatus
-	assignedOrder  string
-	assignedRider  string
+	created       *domain.Order
+	updatedID     string
+	updatedStatus domain.OrderStatus
+	assignedOrder string
+	assignedRider string
 }
 
 func (m *mockOrderRepo) Create(_ context.Context, o *domain.Order) error {
@@ -63,7 +63,7 @@ type mockRiderRepo struct {
 	markedRiderID string
 }
 
-func (m *mockRiderRepo) Create(_ context.Context, _ *domain.Rider) error          { return nil }
+func (m *mockRiderRepo) Create(_ context.Context, _ *domain.Rider) error                { return nil }
 func (m *mockRiderRepo) UpdateLocation(_ context.Context, _ string, _, _ float64) error { return nil }
 func (m *mockRiderRepo) GetByID(_ context.Context, _ string) (*domain.Rider, error) {
 	return nil, nil
@@ -197,10 +197,10 @@ func TestAssignRider(t *testing.T) {
 			wantErrIs: repository.ErrNoRiderAvailable,
 		},
 		{
-			name:         "geosearch infrastructure error",
-			order:        orderInStatus(domain.StatusCreated),
-			findErr:      errors.New("redis: connection refused"),
-			wantErr:      true,
+			name:    "geosearch infrastructure error",
+			order:   orderInStatus(domain.StatusCreated),
+			findErr: errors.New("redis: connection refused"),
+			wantErr: true,
 		},
 		{
 			name:         "db assignment write fails",
@@ -217,11 +217,11 @@ func TestAssignRider(t *testing.T) {
 			wantErr:       true,
 		},
 		{
-			name:        "set rider unavailable in redis fails",
-			order:       orderInStatus(domain.StatusCreated),
+			name:         "set rider unavailable in redis fails",
+			order:        orderInStatus(domain.StatusCreated),
 			nearestRider: riderID,
-			setAvailErr: errors.New("redis: write timeout"),
-			wantErr:     true,
+			setAvailErr:  errors.New("redis: write timeout"),
+			wantErr:      true,
 		},
 		{
 			name:           "kafka publish fails — operation still succeeds",
