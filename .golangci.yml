@@ -1,0 +1,30 @@
+run:
+  timeout: 5m
+  go: '1.26'
+
+linters:
+  disable-all: true
+  enable:
+    - govet
+    - errcheck
+    - staticcheck
+    - gocritic
+    - gofmt
+
+linters-settings:
+  errcheck:
+    # Encoding a response after headers are already sent is unactionable —
+    # the error cannot change the HTTP status code. Exclude these patterns.
+    exclude-functions:
+      - (*encoding/json.Encoder).Encode
+      - (net/http.ResponseWriter).Write
+
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - style
+
+issues:
+  # Show every issue — don't cap at the default 3-per-linter limit.
+  max-issues-per-linter: 0
+  max-same-issues: 0
