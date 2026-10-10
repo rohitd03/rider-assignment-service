@@ -176,6 +176,61 @@ Test coverage by layer:
 
 ---
 
+## Kubernetes
+
+### Deploy with minikube (raw manifests)
+
+```bash
+make minikube-start   # start minikube, build image, apply all manifests, wait for pods
+make minikube-health  # verify all dependencies report healthy
+```
+
+Other useful targets:
+
+```bash
+make minikube-status  # show pods and services in the rider-assignment namespace
+make minikube-logs    # tail app logs
+make minikube-stop    # delete the namespace (run `minikube stop` separately to stop the VM)
+```
+
+### Deploy with Helm
+
+Development (defaults from `values.yaml`):
+
+```bash
+helm upgrade --install rider-assignment ./helm/rider-assignment \
+  --namespace rider-assignment --create-namespace
+```
+
+Production (overrides from `values-prod.yaml` + credentials at runtime):
+
+```bash
+helm upgrade --install rider-assignment ./helm/rider-assignment \
+  --namespace rider-assignment --create-namespace \
+  -f helm/rider-assignment/values-prod.yaml \
+  --set secret.postgresUser=<from-secrets-manager> \
+  --set secret.postgresPassword=<from-secrets-manager>
+```
+
+Uninstall:
+
+```bash
+helm uninstall rider-assignment -n rider-assignment
+```
+
+### What each manifest does
+
+| File | Purpose |
+|------|---------|
+| `namespace.yaml` | Creates the `rider-assignment` namespace to isolate all resources |
+| `configmap.yaml` | Stores non-sensitive runtime config (ports, hostnames, database name) as individual keys that the deployment combines into composite env vars |
+| `secret.yaml` | Holds base64-encoded credentials; replace with External Secrets Operator in production so real values never enter version control |
+| `deployment.yaml` | Declares 2 replicas, constructs `DATABASE_URL` and `REDIS_ADDR` via Kubernetes `$(VAR)` substitution, and configures readiness/liveness probes against `/health`; `terminationGracePeriodSeconds: 35` matches the 30 s graceful drain in `main.go` |
+| `service.yaml` | Exposes the deployment inside the cluster on port 80, forwarding to container port 8080 |
+| `hpa.yaml` | Scales pods between 2 and 10 based on 70 % CPU utilisation; see comment in file for the production Kafka consumer-lag metric alternative |
+
+---
+
 ## Key engineering decisions
 
 ### Why Redis geospatial instead of PostgreSQL for rider locations

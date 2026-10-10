@@ -1,0 +1,24 @@
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: rider-assignment
+  namespace: rider-assignment
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: rider-assignment
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    # CPU utilization is a reasonable default for stateless HTTP services.
+    # In production, replace or supplement this with a kafka_consumer_lag metric
+    # (exposed via KEDA or the Prometheus Adapter) so the service scales in
+    # proportion to the depth of the order-events topic rather than CPU, which
+    # can lag seconds behind a sudden burst of incoming orders.
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70
