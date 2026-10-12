@@ -1,0 +1,17 @@
+# Production overrides — apply alongside the base values:
+#
+#   helm upgrade --install rider-assignment ./helm/rider-assignment \
+#     --namespace rider-assignment --create-namespace \
+#     -f helm/rider-assignment/values-prod.yaml \
+#     --set secret.postgresUser=<from-secrets-manager> \
+#     --set secret.postgresPassword=<from-secrets-manager>
+
+replicaCount: 3
+
+resources:
+  requests:
+    cpu: 200m
+    memory: 128Mi
+  limits:
+    cpu: 1000m
+    memory: 256Mi

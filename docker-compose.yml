@@ -29,55 +29,51 @@ services:
       timeout: 3s
       retries: 10
 
-  # ── ZooKeeper (required by Confluent Kafka) ───────────────────────────────────
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.6.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    healthcheck:
-      test: ["CMD", "cub", "zk-ready", "localhost:2181", "10"]
-      interval: 10s
-      timeout: 15s
-      retries: 10
-      start_period: 20s
-
-  # ── Kafka ────────────────────────────────────────────────────────────────────
+  # ── Kafka (KRaft mode — no ZooKeeper required) ────────────────────────────────
+  # apache/kafka:3.7.0 ships with KRaft enabled by default (server.properties).
+  # Only the advertised listener address needs to be overridden so containers
+  # on the Docker network reach the broker as "kafka:9092" instead of
+  # "localhost:9092" (the image default). The EXTERNAL listener exposes the
+  # broker on localhost:29092 for tools running on the host machine.
   kafka:
-    image: confluentinc/cp-kafka:7.6.0
-    depends_on:
-      zookeeper:
-        condition: service_healthy
+    image: apache/kafka:3.7.0
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Two listeners:
-      #   PLAINTEXT     — used by containers on the Docker network (e.g. the app).
-      #   PLAINTEXT_HOST — mapped to localhost:29092 for connections from the host.
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # KAFKA_PROCESS_ROLES must be set as an env var (not just in server.properties)
+      # so the configure script detects KRaft mode and runs the storage format step.
+      KAFKA_PROCESS_ROLES: "broker,controller"
+      KAFKA_NODE_ID: "1"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@localhost:9093"
+      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092,EXTERNAL://localhost:29092"
+      KAFKA_LISTENERS: "PLAINTEXT://0.0.0.0:9092,EXTERNAL://0.0.0.0:29092,CONTROLLER://0.0.0.0:9093"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
+      # Fixed cluster ID avoids re-formatting the log dir on every restart.
+      CLUSTER_ID: "5L6g3nShT-eMCtK--X86sw"
     ports:
-      - "29092:29092"   # expose PLAINTEXT_HOST listener to the host machine
+      - "29092:29092"   # EXTERNAL listener — for Kafka clients on the host machine
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092"]
-      interval: 15s
+      # Full path required; apache/kafka does not add bin/ to PATH.
+      # start_period gives KRaft time to elect a controller before the health
+      # check counts failures against the retry budget.
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 10s
       timeout: 10s
       retries: 10
+      start_period: 30s
 
   # ── Go service ────────────────────────────────────────────────────────────────
   app:
     build: .
     ports:
       - "8080:8080"
-    env_file: .env
     environment:
-      # Override .env values so the app uses Docker-internal addresses.
+      # All required env vars are set here so no .env file is needed.
       DATABASE_URL: postgres://postgres:postgres@postgres:5432/rider_assignment?sslmode=disable
       REDIS_ADDR: redis:6379
       KAFKA_BROKER: kafka:9092
+      PORT: "8080"
+      LOG_LEVEL: info
     depends_on:
       postgres:
         condition: service_healthy

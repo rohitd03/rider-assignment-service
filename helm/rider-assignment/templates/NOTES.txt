@@ -1,0 +1,11 @@
+rider-assignment has been deployed to namespace {{ .Release.Namespace }}.
+
+  Service (within cluster):
+    http://{{ include "rider-assignment.name" . }}.{{ .Release.Namespace }}.svc.cluster.local
+
+  Port-forward to test locally:
+    kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "rider-assignment.name" . }} 8080:80
+    curl http://localhost:8080/health
+
+  View logs:
+    kubectl -n {{ .Release.Namespace }} logs -l app.kubernetes.io/name={{ include "rider-assignment.name" . }} --follow

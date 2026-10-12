@@ -1,0 +1,63 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/rohitd03/rider-assignment-service
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi
+
+hpa:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  cpuUtilization: 70
+
+config:
+  httpPort: "8080"
+  kafkaBrokers: "kafka:9092"
+  redisHost: "redis"
+  redisPort: "6379"
+  postgresHost: "postgres"
+  postgresPort: "5432"
+  postgresDb: "rider_assignment"
+  logLevel: "info"
+  postgresSslMode: "require"
+
+secret:
+  # Plain-text values — Helm base64-encodes them when rendering the Secret.
+  # Do not put real credentials here. Pass --set secret.postgresUser=...
+  # and --set secret.postgresPassword=... at deploy time, or integrate with
+  # the External Secrets Operator to source them from a secrets manager.
+  postgresUser: postgres
+  postgresPassword: postgres
+
+probes:
+  readiness:
+    initialDelaySeconds: 10
+    periodSeconds: 5
+  liveness:
+    initialDelaySeconds: 30
+    periodSeconds: 10
+
+terminationGracePeriodSeconds: 35
+
+strategy:
+  type: RollingUpdate
+  maxSurge: 1
+  maxUnavailable: 0
+namespace:
+  # Namespaces are usually owned by the platform (Terraform or --create-namespace),
+  # not by an app chart: uninstalling the chart would delete everything in it.
+  create: false

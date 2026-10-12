@@ -1,0 +1,6 @@
+image:
+  repository: rider-assignment-service
+  tag: local
+  pullPolicy: Never
+config:
+  postgresSslMode: "disable"
