@@ -44,3 +44,42 @@ jobs:
             ghcr.io/rohitd03/rider-assignment-service:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # GitOps hand-off: CI never touches the cluster. It only records the new image
+  # tag in Git; Argo CD sees that commit and rolls it out.
+  bump-gitops:
+    name: Bump image tag in platform-gitops
+    needs: build-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout platform-gitops
+        uses: actions/checkout@v4
+        with:
+          repository: rohitd03/platform-gitops
+          # Fine-grained token: Contents read/write on platform-gitops only.
+          # The built-in GITHUB_TOKEN can only write to THIS repo.
+          token: ${{ secrets.GITOPS_TOKEN }}
+          path: gitops
+
+      - name: Set image.tag to the tested commit
+        working-directory: gitops
+        env:
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          VALUES: apps/rider-assignment/local/values.yaml
+        run: |
+          yq -i '.image.tag = strenv(SHA)' "$VALUES"
+          if git diff --quiet; then
+            echo "Already deploying $SHA, nothing to do."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "rider-assignment: deploy ${SHA::7}"
+          # Another service's pipeline may have pushed meanwhile: rebase and retry.
+          for attempt in 1 2 3; do
+            git pull --rebase -q && git push -q && exit 0
+            echo "Push failed (attempt $attempt), retrying..."
+            sleep 5
+          done
+          exit 1
